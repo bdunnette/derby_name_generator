@@ -22,7 +22,7 @@ itsdangerous==1.1.0
 Jinja2==2.10
 jmespath==0.9.3
 kappa==0.6.0
-Keras==2.2.4
+Keras==2.1.6
 Keras-Applications==1.0.7
 Keras-Preprocessing==1.0.9
 lambda-packages==0.20.0
