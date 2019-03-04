@@ -6,12 +6,7 @@ from decouple import config
 
 API_BASE_URL = config('API_BASE_URL', default='https://mastodon.social')
 BOT_NAME = config('BOT_NAME', default='derbot')
-CLIENTCRED_FILE = config(
-    'CLIENTCRED_FILE', default='{}_clientcred.secret'.format(BOT_NAME))
-USERCRED_FILE = config(
-    'USERCRED_FILE', default='{}_usercred.secret'.format(BOT_NAME))
-USERNAME = config('USERNAME')
-PASSWORD = config('PASSWORD')
+ACCESS_TOKEN = config('ACCESS_TOKEN')
 
 registered_names_file = 'derby_names.txt'
 with open(registered_names_file) as f:
@@ -19,26 +14,15 @@ with open(registered_names_file) as f:
 print("Loaded %s existing names from %s" %
       (len(registered_names), registered_names_file))
 
-if not os.path.isfile(CLIENTCRED_FILE):
-    Mastodon.create_app(
-        BOT_NAME,
-        api_base_url=API_BASE_URL,
-        to_file=CLIENTCRED_FILE
-    )
-
 mastodon = Mastodon(
-    client_id=CLIENTCRED_FILE,
+    access_token=ACCESS_TOKEN,
     api_base_url=API_BASE_URL
 )
-
-mastodon.log_in(
-    USERNAME,
-    PASSWORD,
-    to_file=USERCRED_FILE
-)
+print("Logging on to %s..." % API_BASE_URL)
 
 textgen = textgenrnn(weights_path='model/derbynames_weights.hdf5',
-                     vocab_path='model/derbynames_vocab.json', config_path='model/derbynames_config.json')
+                     vocab_path='model/derbynames_vocab.json', 
+                     config_path='model/derbynames_config.json')
 
 temperature = [1.0, 0.5, 0.5, 0.2]
 generated_names = textgen.generate(
