@@ -13,8 +13,11 @@ global graph
 clear_session()
 graph = tf.get_default_graph()
 
-host_ip = check_output(
-    ["hostname", "-I"]).splitlines()[0].decode("utf-8").strip()
+if 'SERVERTYPE' in os.environ and os.environ['SERVERTYPE'] == 'AWS Lambda':
+    host_ip = None
+else:
+    host_ip = check_output(
+        ["hostname", "-I"]).splitlines()[0].decode("utf-8").strip()
 
 registered_names_file = 'derby_names.txt'
 with open(registered_names_file) as f:
@@ -22,8 +25,10 @@ with open(registered_names_file) as f:
 print("Loaded %s existing names from %s" %
       (len(registered_names), registered_names_file))
 
-textgen = textgenrnn(weights_path='model/derbynames_weights.hdf5',
-                     vocab_path='model/derbynames_vocab.json', config_path='model/derbynames_config.json')
+model_name = 'derbynames'
+textgen = textgenrnn(weights_path='model/{}_weights.hdf5'.format(model_name),
+                     vocab_path='model/{}_vocab.json'.format(model_name),
+                     config_path='model/{}_config.json'.format(model_name))
 
 app = Flask(__name__, static_url_path='')
 
@@ -46,4 +51,7 @@ def generate_names():
 
 
 if __name__ == '__main__':
-    app.run(host=host_ip)
+    if host_ip:
+        app.run(host=host_ip)
+    else:
+        app.run()

@@ -1,10 +1,11 @@
 {
     "dev": {
         "app_function": "app.app",
-        "profile_name": null,
-        "project_name": "derby-names",
+        "aws_region": "us-east-1",
+        "profile_name": "default",
+        "project_name": "derby-name-gene",
         "runtime": "python3.6",
-        "s3_bucket": "zappa-uojdmibkr",
+        "s3_bucket": "zappa-pu9urh3jd",
         "slim_handler": true
     }
 }
