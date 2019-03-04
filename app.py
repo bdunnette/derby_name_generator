@@ -89,5 +89,5 @@ while len(chosen_name) < 2:
     chosen_name = random.choice(generated_names)
 print("Tooting name: {}".format(chosen_name))
 generated_names.remove(chosen_name)
-# mastodon.toot(chosen_name)
+mastodon.toot(chosen_name)
 generated_names_file.write_text(json.dumps(generated_names))
