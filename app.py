@@ -20,28 +20,22 @@ print("Loaded %s existing names from %s" %
       (len(registered_names), registered_names_file))
 
 if not os.path.isfile(CLIENTCRED_FILE):
-    # Register app - only once!
     Mastodon.create_app(
         BOT_NAME,
         api_base_url=API_BASE_URL,
         to_file=CLIENTCRED_FILE
     )
 
-
-# Log in - either every time, or use persisted
 mastodon = Mastodon(
     client_id=CLIENTCRED_FILE,
     api_base_url=API_BASE_URL
 )
 
-if not os.path.isfile(USERCRED_FILE):
-    mastodon.log_in(
-        USERNAME,
-        PASSWORD,
-        to_file=USERCRED_FILE
-    )
-
-print(mastodon)
+mastodon.log_in(
+    USERNAME,
+    PASSWORD,
+    to_file=USERCRED_FILE
+)
 
 textgen = textgenrnn(weights_path='model/derbynames_weights.hdf5',
                      vocab_path='model/derbynames_vocab.json', config_path='model/derbynames_config.json')
@@ -51,7 +45,7 @@ generated_names = textgen.generate(
     temperature=temperature, return_as_list=True)[0].split('\n')
 new_names = [n.strip()
              for n in generated_names if n not in registered_names]
-print("Names to choose from: {}".format(new_names))
+print("Generated names: {}".format(new_names))
 chosen_name = random.choice(new_names)
 print("Tooting name: {}".format(chosen_name))
 mastodon.toot(chosen_name)
