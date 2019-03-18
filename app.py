@@ -50,8 +50,9 @@ def download_names():
     initial_letters = string.ascii_uppercase
     # Loop through initial letters (A-Z)
     for letter in initial_letters:
-        r3 = session.get(
-            "https://rollerderbyroster.com/view-names/?ini={}".format(letter))
+        url3 = "https://rollerderbyroster.com/view-names/?ini={}".format(letter)
+        print("Downloading names from %s" % url3)
+        r3 = session.get(url3)
         d3 = r3.text
         soup3 = BeautifulSoup(d3, "lxml")
 
