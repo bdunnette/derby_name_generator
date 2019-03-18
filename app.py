@@ -10,11 +10,14 @@ BOT_NAME = config('BOT_NAME', default='derbot')
 ACCESS_TOKEN = config('ACCESS_TOKEN')
 NAME_BUFFER_SIZE = config('NAME_BUFFER_SIZE', default=20)
 
-registered_names_filename = 'data/registered_names.txt'
+registered_names_filename = 'data/registered_names.json'
 registered_names_file = Path(registered_names_filename)
 
-generated_names_filename = 'data/generated_names.txt'
+generated_names_filename = 'data/generated_names.json'
 generated_names_file = Path(generated_names_filename)
+
+used_names_filename = 'data/used_names.json'
+used_names_file = Path(used_names_filename)
 
 
 def download_names():
@@ -60,7 +63,6 @@ def generate_new_names(name_list):
         temperature=temperature, return_as_list=True)[0].split('\n')
     unused_names = [n.strip()
                     for n in generated_names if (n not in registered_names) and (len(n) > 2)]
-    print("Generated names: {}".format(new_names))
     return(name_list + new_names)
 
 
@@ -76,6 +78,10 @@ registered_names = json.loads(registered_names_file.read_text())
 print("Loaded %s existing names from %s" %
       (len(registered_names), registered_names_file))
 
+used_names = list()
+if used_names_file.is_file():
+    used_names = json.loads(used_names_file.read_text())
+
 mastodon = Mastodon(
     access_token=ACCESS_TOKEN,
     api_base_url=API_BASE_URL
@@ -83,12 +89,18 @@ mastodon = Mastodon(
 print("Logging on to %s..." % API_BASE_URL)
 
 if len(generated_names) < NAME_BUFFER_SIZE:
-    generated_names = generate_new_names(generated_names)
+    # generated_names = generate_new_names(generated_names)
+    # Remove first and last names generated, as these are often (usually?) incomplete or nonsensical
+    generated_names = generate_new_names(generated_names)[1:-1]
+    print("Generated names: {}".format(generated_names))
 chosen_name = random.choice(generated_names)
-while len(chosen_name) < 2:
+while len(chosen_name) < 2 or (chosen_name in used_names):
     generated_names.remove(chosen_name)
     chosen_name = random.choice(generated_names)
 print("Tooting name: {}".format(chosen_name))
 generated_names.remove(chosen_name)
 mastodon.toot(chosen_name)
+used_names.append(chosen_name)
+print("Used names: {}".format(used_names))
+used_names_file.write_text(json.dumps(used_names))
 generated_names_file.write_text(json.dumps(generated_names))
