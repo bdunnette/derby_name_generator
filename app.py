@@ -1,6 +1,7 @@
 import os
 import random
 import json
+import string
 from pathlib import Path
 from mastodon import Mastodon
 from decouple import config
@@ -45,6 +46,19 @@ def download_names():
 
     for idx, td in enumerate(rows2):
         name_set.add(td.get_text())
+
+    initial_letters = string.ascii_uppercase
+    # Loop through initial letters (A-Z)
+    for letter in initial_letters:
+        r3 = session.get(
+            "https://rollerderbyroster.com/view-names/?ini={}".format(letter))
+        d3 = r3.text
+        soup3 = BeautifulSoup(d3, "lxml")
+
+        rows3 = soup3.find_all('ul')
+        # Use only last unordered list - this is where names are!
+        for idx, li in enumerate(rows3[-1]):
+            name_set.add(li.get_text())
 
     name_list = list(name_set)
     print("Writing %s names to %s..." %
