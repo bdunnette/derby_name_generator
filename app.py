@@ -67,7 +67,8 @@ def download_names():
     registered_names_file.write_text(json.dumps(name_list))
 
 
-def generate_new_names(name_list):
+
+def generate_new_names(name_list=[], registered_names=[], used_names=[]):
     from textgenrnn import textgenrnn
     textgen = textgenrnn(weights_path='model/derbynames_weights.hdf5',
                          vocab_path='model/derbynames_vocab.json',
@@ -77,7 +78,7 @@ def generate_new_names(name_list):
     new_names = textgen.generate(
         temperature=temperature, return_as_list=True)[0].split('\n')
     unused_names = [n.strip()
-                    for n in generated_names if (n not in registered_names) and (len(n) > 2)]
+                    for n in generated_names if (n not in registered_names) and (n not in used_names) and (len(n.strip()) > 3)][1:-1]
     return(name_list + new_names)
 
 
@@ -104,14 +105,9 @@ mastodon = Mastodon(
 print("Logging on to %s..." % API_BASE_URL)
 
 if len(generated_names) < NAME_BUFFER_SIZE:
-    # generated_names = generate_new_names(generated_names)
-    # Remove first and last names generated, as these are often (usually?) incomplete or nonsensical
-    generated_names = generate_new_names(generated_names)[1:-1]
+    generated_names = generate_new_names(generated_names, registered_names, used_names)
     print("Generated names: {}".format(generated_names))
 chosen_name = random.choice(generated_names)
-while len(chosen_name) < 2 or (chosen_name in used_names):
-    generated_names.remove(chosen_name)
-    chosen_name = random.choice(generated_names)
 print("Tooting name: {}".format(chosen_name))
 generated_names.remove(chosen_name)
 mastodon.toot(chosen_name)
