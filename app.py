@@ -74,7 +74,11 @@ def generate_new_names(name_list=[], registered_names=[], used_names=[]):
                          vocab_path='model/derbynames_vocab.json',
                          config_path='model/derbynames_config.json')
 
-    temperature = [1.0, 0.5, 0.5, 0.2]
+    # temperature = [1.0, 0.5, 0.5, 0.2]
+    temperature = []
+    for i in range(4):
+        temp = round(random.random(),1)
+        temperature.append(temp)
     new_names = textgen.generate(
         temperature=temperature, return_as_list=True)[0].split('\n')
     unused_names = [n.strip()
