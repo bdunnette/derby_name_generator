@@ -85,7 +85,7 @@ def generate_new_names(name_list=[], registered_names=[], used_names=[]):
 generated_names = list()
 if generated_names_file.is_file():
     json_data = generated_names_file.open().read()
-    print(json_data)
+    # print(json_data)
     generated_names = json.loads(json_data)
 
 if not registered_names_file.is_file():
