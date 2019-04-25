@@ -11,6 +11,7 @@ h5py==2.9.0
 html5lib==0.9999999
 http-ece==1.1.0
 idna==2.8
+inscriptis==0.0.4.0
 Keras==2.1.6
 lxml==4.3.2
 Markdown==3.0.1

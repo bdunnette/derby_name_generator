@@ -1,5 +1,3 @@
 #!/bin/bash
-source /home/derbot/.profile
-source /home/derbot/.virtualenvs/derbot/bin/activate
-cd /home/derbot/Code/derby_name_generator
-python app.py
+cd /home/$USER/Code/derby_name_generator
+/home/$USER/.virtualenvs/derbot/bin/python app.py
