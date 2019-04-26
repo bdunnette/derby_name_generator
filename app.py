@@ -105,8 +105,8 @@ def generate_new_names(name_list=[], registered_names=[], used_names=[]):
     new_names = textgen.generate(
         temperature=temperature, return_as_list=True)[0].split('\n')
     unused_names = [n.strip()
-                    for n in generated_names if (n not in registered_names) and (n not in used_names) and (len(n.strip()) > 3)][1:-1]
-    return(name_list + new_names)
+                    for n in new_names if (n not in registered_names) and (n not in used_names) and (len(n.strip()) > 3)][1:-1]
+    return(name_list + unused_names)
 
 
 def main():
