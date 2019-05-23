@@ -124,7 +124,8 @@ def main():
 
     mastodon = Mastodon(
         access_token=ACCESS_TOKEN,
-        api_base_url=API_BASE_URL
+        api_base_url=API_BASE_URL,
+        ratelimit_method='pace'
     )
     print("Logging on to %s..." % API_BASE_URL)
 
