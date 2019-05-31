@@ -4,6 +4,7 @@ from time import sleep
 import json
 import string
 import pprint
+from itertools import chain
 from pathlib import Path
 from mastodon import Mastodon
 from decouple import config
@@ -57,7 +58,7 @@ def download_registered_names():
     for letter in initial_letters:
         url3 = "https://rollerderbyroster.com/view-names/?ini={}".format(
             letter)
-        print("Downloading names from %s" % url3)
+        print("Downloading names from {}".format(url3))
         r3 = session.get(url3)
         d3 = r3.text
         soup3 = BeautifulSoup(d3, "lxml")
@@ -65,7 +66,9 @@ def download_registered_names():
         rows3 = soup3.find_all('ul')
         # Use only last unordered list - this is where names are!
         for idx, li in enumerate(rows3[-1]):
-            name_set.add(li.get_text())
+            # Name should be the text of the link within the list item
+            name = li.find('a').get_text()
+            name_set.add(name)
 
     name_list = list(name_set)
     print("Writing %s names to %s..." %
@@ -91,7 +94,7 @@ def download_used_names(mastodon):
         len(downloaded_names), used_names_file))
 
 
-def generate_new_names(name_list=[], registered_names=[], used_names=[]):
+def generate_new_names(name_list=[], skip_names=[]):
     from textgenrnn import textgenrnn
     textgen = textgenrnn(weights_path='model/derbynames_weights.hdf5',
                          vocab_path='model/derbynames_vocab.json',
@@ -104,18 +107,13 @@ def generate_new_names(name_list=[], registered_names=[], used_names=[]):
         temperature.append(temp)
     new_names = textgen.generate(
         temperature=temperature, return_as_list=True)[0].split('\n')
+    # Discard used and short names; trim first and last generated names, as these tend to be gibberish?
     unused_names = [n.strip()
-                    for n in new_names if (n not in registered_names) and (n not in used_names) and (len(n.strip()) > 3)][1:-1]
+                    for n in new_names if (len(n.strip()) > 3) and (n not in skip_names)][1:-1]
     return(name_list + unused_names)
 
 
 def main():
-    generated_names = list()
-    if generated_names_file.is_file():
-        json_data = generated_names_file.open().read()
-        # print(json_data)
-        generated_names = json.loads(json_data)
-
     if not registered_names_file.is_file():
         download_registered_names()
     registered_names = json.loads(registered_names_file.read_text())
@@ -137,15 +135,31 @@ def main():
     print("Loaded %s existing names from %s" %
           (len(used_names), used_names_file))
 
+    skip_names = set(chain(used_names,registered_names))
+    
+    generated_names = list()
+    if generated_names_file.is_file():
+        json_data = generated_names_file.open().read()
+        # print(json_data)
+        generated_names = list(set(json.loads(json_data)))
+        print("Loaded %s existing names from %s" %
+              (len(generated_names), generated_names_file))
+        print("Filtering generated names...")
+        generated_names = [
+            n for n in generated_names if n not in skip_names]
+        # generated_names.sort()
+        print("%s generated names ready!" % len(generated_names))
+
     if len(generated_names) < NAME_BUFFER_SIZE:
         generated_names = generate_new_names(
-            generated_names, registered_names, used_names)
+            generated_names, skip_names)
         print("Generated names: {}".format(generated_names))
 
+    chosen_name = random.choice(generated_names)
+    print("Chosen name: {}".format(chosen_name))
     sleep_time = random.randint(MIN_WAIT, MAX_WAIT)
     print("Waiting {} seconds...".format(sleep_time))
     sleep(sleep_time)
-    chosen_name = random.choice(generated_names)
     print("Tooting name: {}".format(chosen_name))
     mastodon.toot(chosen_name)
     generated_names.remove(chosen_name)
