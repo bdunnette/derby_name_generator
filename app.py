@@ -9,6 +9,7 @@ from pathlib import Path
 from mastodon import Mastodon
 from decouple import config
 from inscriptis import get_text
+# import nltk
 
 API_BASE_URL = config('API_BASE_URL', default='https://mastodon.social')
 BOT_NAME = config('BOT_NAME', default='derbot')
@@ -26,6 +27,14 @@ generated_names_file = Path(generated_names_filename)
 used_names_filename = 'data/used_names.json'
 used_names_file = Path(used_names_filename)
 
+# nltk.download('words')
+# dictionary_words = nltk.corpus.words.words()
+
+# def is_dictionary_word(word):
+#     if word in dictionary_words or word.lower().strip() in dictionary_words:
+#         return True
+#     else:
+#         return False
 
 def download_registered_names():
     from bs4 import BeautifulSoup
@@ -88,8 +97,8 @@ def download_used_names(mastodon):
         names = [get_text(s.content).strip() for s in next_page]
         downloaded_names.extend(names)
         print("Downloaded {} used names...".format(len(downloaded_names)))
+        used_names_file.write_text(json.dumps(downloaded_names))
         next_page = mastodon.fetch_next(next_page)
-    used_names_file.write_text(json.dumps(downloaded_names))
     print("Saved {} used names to {}".format(
         len(downloaded_names), used_names_file))
 
@@ -107,7 +116,7 @@ def generate_new_names(name_list=[], skip_names=[]):
         temperature.append(temp)
     new_names = textgen.generate(
         temperature=temperature, return_as_list=True)[0].split('\n')
-    # Discard used and short names; trim first and last generated names, as these tend to be gibberish?
+    # Discard used and short names; trim first and last generated names, as these tend to be gibberish
     unused_names = [n.strip()
                     for n in new_names if (len(n.strip()) > 3) and (n not in skip_names)][1:-1]
     return(name_list + unused_names)
@@ -135,8 +144,8 @@ def main():
     print("Loaded %s existing names from %s" %
           (len(used_names), used_names_file))
 
-    skip_names = set(chain(used_names,registered_names))
-    
+    skip_names = set(chain(used_names, registered_names))
+
     generated_names = list()
     if generated_names_file.is_file():
         json_data = generated_names_file.open().read()
@@ -147,7 +156,7 @@ def main():
         print("Filtering generated names...")
         generated_names = [
             n for n in generated_names if n not in skip_names]
-        # generated_names.sort()
+        generated_names.sort()
         print("%s generated names ready!" % len(generated_names))
 
     if len(generated_names) < NAME_BUFFER_SIZE:
