@@ -9,14 +9,23 @@ from pathlib import Path
 from mastodon import Mastodon
 from decouple import config
 from inscriptis import get_text
-# import nltk
+import nltk
 
 API_BASE_URL = config('API_BASE_URL', default='https://mastodon.social')
-BOT_NAME = config('BOT_NAME', default='derbot')
 ACCESS_TOKEN = config('ACCESS_TOKEN')
-NAME_BUFFER_SIZE = config('NAME_BUFFER_SIZE', default=20)
-MIN_WAIT = config('MIN_WAIT', default=10)
-MAX_WAIT = config('MAX_WAIT', default=300)
+ACTUALLY_TOOT = config('ACTUALLY_TOOT', default=False, cast=bool)
+
+MODEL_NAME = config('MODEL_NAME', default='derbynames')
+NAME_BUFFER_SIZE = config('NAME_BUFFER_SIZE', default=100)
+
+DEFAULT_TEMP = config('DEFAULT_TEMP', default=1.0)
+USE_RANDOM_TEMPS = config('USE_RANDOM_TEMPS', default=True, cast=bool)
+MIN_TEMP = config('MIN_TEMP', default=0.2, cast=float)
+MAX_TEMP = config('MAX_TEMP', default=1.0, cast=float)
+
+DO_WAIT = config('DO_WAIT', default=False, cast=bool)
+MIN_WAIT = config('MIN_WAIT', default=10, cast=int)
+MAX_WAIT = config('MAX_WAIT', default=300, cast=int)
 
 registered_names_filename = 'data/registered_names.json'
 registered_names_file = Path(registered_names_filename)
@@ -27,14 +36,16 @@ generated_names_file = Path(generated_names_filename)
 used_names_filename = 'data/used_names.json'
 used_names_file = Path(used_names_filename)
 
-# nltk.download('words')
-# dictionary_words = nltk.corpus.words.words()
+nltk.download('words')
+dictionary_words = nltk.corpus.words.words()
 
-# def is_dictionary_word(word):
-#     if word in dictionary_words or word.lower().strip() in dictionary_words:
-#         return True
-#     else:
-#         return False
+
+def is_dictionary_word(word):
+    if word in dictionary_words or word.lower().strip() in dictionary_words:
+        return True
+    else:
+        return False
+
 
 def download_registered_names():
     from bs4 import BeautifulSoup
@@ -103,32 +114,35 @@ def download_used_names(mastodon):
         len(downloaded_names), used_names_file))
 
 
-def generate_new_names(name_list=[], skip_names=[]):
+def generate_new_names(skip_names=[], model_name=MODEL_NAME, batch_size=10, random_temps=True):
     from textgenrnn import textgenrnn
-    textgen = textgenrnn(weights_path='model/derbynames_weights.hdf5',
-                         vocab_path='model/derbynames_vocab.json',
-                         config_path='model/derbynames_config.json')
+    textgen = textgenrnn(weights_path='model/{}_weights.hdf5'.format(model_name),
+                         vocab_path='model/{}_vocab.json'.format(model_name),
+                         config_path='model/{}_config.json'.format(model_name))
 
-    # temperature = [1.0, 0.5, 0.5, 0.2]
     temperature = []
-    for i in range(4):
-        temp = round(random.random(), 1)
-        temperature.append(temp)
-    new_names = textgen.generate(
-        temperature=temperature, return_as_list=True)[0].split('\n')
-    # Discard used and short names; trim first and last generated names, as these tend to be gibberish
+    if random_temps is True:
+        for i in range(batch_size):
+            temp = round(random.uniform(MIN_TEMP, MAX_TEMP), 1)
+            temperature.append(temp)
+    else:
+        temperature.append(DEFAULT_TEMP)
+    new_names = textgen.generate(batch_size,
+                                 temperature=temperature, return_as_list=True)
+    # Discard used and short names
     unused_names = [n.strip()
-                    for n in new_names if (len(n.strip()) > 3) and (n not in skip_names)][1:-1]
-    return(name_list + unused_names)
+                    for n in new_names if (len(n.strip()) > 3) and (n not in skip_names) and (not is_dictionary_word(n))]
+    return(unused_names)
 
 
 def main():
+    registered_names = list()
     if not registered_names_file.is_file():
         download_registered_names()
-    registered_names = json.loads(registered_names_file.read_text())
+    registered_names = sorted(json.loads(registered_names_file.read_text()))
     print("Loaded %s existing names from %s" %
           (len(registered_names), registered_names_file))
-
+    
     mastodon = Mastodon(
         access_token=ACCESS_TOKEN,
         api_base_url=API_BASE_URL,
@@ -144,7 +158,7 @@ def main():
     print("Loaded %s existing names from %s" %
           (len(used_names), used_names_file))
 
-    skip_names = set(chain(used_names, registered_names))
+    skip_names = used_names + registered_names
 
     generated_names = list()
     if generated_names_file.is_file():
@@ -157,25 +171,29 @@ def main():
         generated_names = [
             n for n in generated_names if n not in skip_names]
         generated_names.sort()
-        print("%s generated names ready!" % len(generated_names))
 
     if len(generated_names) < NAME_BUFFER_SIZE:
-        generated_names = generate_new_names(
-            generated_names, skip_names)
-        print("Generated names: {}".format(generated_names))
+        new_names = generate_new_names(
+            skip_names=skip_names)
+        print("Generated names: {}".format(new_names))
+        generated_names.extend(new_names)
 
+    print("%s generated names ready!" % len(generated_names))
     chosen_name = random.choice(generated_names)
     print("Chosen name: {}".format(chosen_name))
-    sleep_time = random.randint(MIN_WAIT, MAX_WAIT)
-    print("Waiting {} seconds...".format(sleep_time))
-    sleep(sleep_time)
-    print("Tooting name: {}".format(chosen_name))
-    mastodon.toot(chosen_name)
-    generated_names.remove(chosen_name)
-    used_names.append(chosen_name)
-    # print("Used names: {}".format(used_names))
-    used_names_file.write_text(json.dumps(used_names))
-    generated_names_file.write_text(json.dumps(generated_names))
+    
+    if DO_WAIT is True:
+        sleep_time = random.randint(MIN_WAIT, MAX_WAIT)
+        print("Waiting {} seconds...".format(sleep_time))
+        sleep(sleep_time)
+
+    if ACTUALLY_TOOT is True:
+        print("Tooting name: {}".format(chosen_name))
+        mastodon.toot(chosen_name)
+        generated_names.remove(chosen_name)
+        generated_names_file.write_text(json.dumps(generated_names))
+        used_names.append(chosen_name)
+        used_names_file.write_text(json.dumps(used_names))
 
 
 if __name__ == "__main__":

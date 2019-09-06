@@ -1,1 +1,1 @@
-{"rnn_layers": 3, "rnn_size": 128, "rnn_bidirectional": true, "max_length": 20, "max_words": 10000, "dim_embeddings": 100, "word_level": false, "single_text": true, "name": "derbynames", "train_size": 1.0, "is_csv": false}
+{"rnn_layers": 3, "rnn_size": 128, "rnn_bidirectional": false, "max_length": 20, "max_words": 10000, "dim_embeddings": 100, "word_level": false, "single_text": false, "name": "derbynames", "train_size": 1.0}

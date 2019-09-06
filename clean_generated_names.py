@@ -20,9 +20,10 @@ dictionary_words = nltk.corpus.words.words()
 
 
 def is_dictionary_word(word, check_lower=True):
-    if word in dictionary_words:
+    w = word.strip()
+    if w in dictionary_words:
         return True
-    if check_lower is True and word.lower().strip() in dictionary_words:
+    if check_lower is True and w.lower() in dictionary_words:
         return True
     else:
         return False
